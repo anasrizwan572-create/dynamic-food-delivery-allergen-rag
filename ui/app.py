@@ -159,23 +159,20 @@ def query_backend_api(
 def fetch_health_status(api_url: str = DEFAULT_API_URL) -> Dict[str, Any]:
     """Check health and readiness of the backend services."""
     clean_url = api_url.rstrip("/")
-
     try:
-        resp = requests.get(f"{clean_url}/health", timeout=10)
-
+        resp = requests.get(f"{clean_url}/health", timeout=5)
         if resp.status_code == 200:
             return resp.json()
+    except Exception:
+        pass
 
-        return {
-            "status": "error",
-            "error": f"Backend returned HTTP {resp.status_code}"
-        }
+    try:
+        from api.main import get_health
 
+        return get_health().model_dump()
     except Exception as e:
-        return {
-            "status": "unreachable",
-            "error": str(e)
-        }
+        return {"status": "unreachable", "error": str(e)}
+
 
 # =====================================================================
 # UI Presentation Components
