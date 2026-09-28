@@ -1,7 +1,7 @@
 """Deterministic query and constraint parser for restaurant menu queries."""
 
 import re
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 from pydantic import BaseModel, Field
 
 from ingestion.normalize_data import ALLERGEN_PATTERNS, CANONICAL_LOCATIONS, mask_allergen_exceptions
