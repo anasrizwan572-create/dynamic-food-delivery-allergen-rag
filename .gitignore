@@ -1,3 +1,4 @@
+data/processed/chroma_db/
 # Python
 __pycache__/
 *.py[cod]
