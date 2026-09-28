@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="grad_bread" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8590C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D9480F;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect width="600" height="400" rx="16" fill="url(#grad_bread)" />
+  <circle cx="300" cy="170" r="95" fill="rgba(255, 255, 255, 0.15)" />
+  <circle cx="300" cy="170" r="75" fill="rgba(255, 255, 255, 0.22)" filter="url(#shadow)" />
+  <text x="300" y="200" font-size="76" text-anchor="middle" font-family="'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif">🫓</text>
+  <rect x="180" y="275" width="240" height="32" rx="16" fill="rgba(0, 0, 0, 0.25)" />
+  <text x="300" y="296" font-size="14" font-weight="600" fill="#FFFFFF" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" letter-spacing="1">Clay Oven Baked</text>
+  <text x="300" y="345" font-size="24" font-weight="700" fill="#FFFFFF" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">Tandoori Breads</text>
+</svg>

@@ -1,0 +1,437 @@
+{
+  "timestamp": "2026-09-28T17:40:10Z",
+  "dataset_size": 15,
+  "summary_metrics": {
+    "num_queries": 15,
+    "allergen_safety_recall": 1.0,
+    "price_precision": 1.0,
+    "dietary_recall": 1.0,
+    "citation_accuracy": 1.0,
+    "safety_invariant_compliance": 1.0,
+    "negative_rejection_accuracy": 1.0,
+    "latency_profile_mean_ms": {
+      "parse_ms": 0.28,
+      "retrieval_ms": 17.08,
+      "rerank_ms": 0.47,
+      "verify_ms": 0.4,
+      "generation_ms": 0.08,
+      "total_ms": 18.96
+    }
+  },
+  "case_details": [
+    {
+      "query_id": "BM_001",
+      "query": "Find Halal chicken under PKR 1500 without dairy in Gulberg",
+      "category": "multi_constraint",
+      "expected_status": "SUPPORTED",
+      "actual_status": "SUPPORTED",
+      "results_count": 5,
+      "served_dish_ids": [
+        "dish_014",
+        "dish_017",
+        "dish_001",
+        "dish_003",
+        "dish_004"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [
+        "Warning for 'Mystery Special Daily Daal': ALLERGEN_INFORMATION_UNKNOWN. Cannot guarantee allergen-free status due to unverified allergen data."
+      ],
+      "latency": {
+        "parse_ms": 0.36,
+        "retrieval_ms": 23.86,
+        "rerank_ms": 0.64,
+        "verify_ms": 0.88,
+        "generation_ms": 0.18,
+        "total_ms": 27.28
+      }
+    },
+    {
+      "query_id": "BM_002",
+      "query": "Gluten-free beef burger under 2000 in Johar Town",
+      "category": "allergen_gluten",
+      "expected_status": "SUPPORTED",
+      "actual_status": "SUPPORTED",
+      "results_count": 1,
+      "served_dish_ids": [
+        "dish_022"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [],
+      "latency": {
+        "parse_ms": 0.27,
+        "retrieval_ms": 20.4,
+        "rerank_ms": 0.15,
+        "verify_ms": 0.07,
+        "generation_ms": 0.06,
+        "total_ms": 21.19
+      }
+    },
+    {
+      "query_id": "BM_003",
+      "query": "Chicken dishes without peanuts in Gulberg",
+      "category": "allergen_peanuts",
+      "expected_status": "SUPPORTED",
+      "actual_status": "SUPPORTED",
+      "results_count": 5,
+      "served_dish_ids": [
+        "dish_002",
+        "dish_014",
+        "dish_016",
+        "dish_017",
+        "dish_001"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [
+        "Warning for 'Mystery Special Daily Daal': ALLERGEN_INFORMATION_UNKNOWN. Cannot guarantee allergen-free status due to unverified allergen data."
+      ],
+      "latency": {
+        "parse_ms": 0.36,
+        "retrieval_ms": 24.26,
+        "rerank_ms": 0.94,
+        "verify_ms": 0.63,
+        "generation_ms": 0.15,
+        "total_ms": 27.6
+      }
+    },
+    {
+      "query_id": "BM_004",
+      "query": "Mystery Special Daily Daal",
+      "category": "safety_unknown",
+      "expected_status": "INSUFFICIENT_EVIDENCE",
+      "actual_status": "INSUFFICIENT_EVIDENCE",
+      "results_count": 1,
+      "served_dish_ids": [
+        "dish_009"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [
+        "Warning for 'Mystery Special Daily Daal': ALLERGEN_INFORMATION_UNKNOWN. Cannot guarantee allergen-free status due to unverified allergen data.",
+        "Warning for 'Chefs Secret Karahi': CONFLICTING_ALLERGEN_EVIDENCE. Cannot guarantee allergen-free status due to unverified allergen data.",
+        "ALLERGEN_INFORMATION_UNKNOWN"
+      ],
+      "latency": {
+        "parse_ms": 0.27,
+        "retrieval_ms": 24.94,
+        "rerank_ms": 0.89,
+        "verify_ms": 0.34,
+        "generation_ms": 0.06,
+        "total_ms": 26.88
+      }
+    },
+    {
+      "query_id": "BM_005",
+      "query": "Chefs Secret Karahi",
+      "category": "safety_conflict",
+      "expected_status": "CONFLICTING_EVIDENCE",
+      "actual_status": "CONFLICTING_EVIDENCE",
+      "results_count": 1,
+      "served_dish_ids": [
+        "dish_033"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [
+        "Warning for 'Chefs Secret Karahi': CONFLICTING_ALLERGEN_EVIDENCE. Cannot guarantee allergen-free status due to unverified allergen data.",
+        "CONFLICTING_ALLERGEN_EVIDENCE"
+      ],
+      "latency": {
+        "parse_ms": 0.22,
+        "retrieval_ms": 23.2,
+        "rerank_ms": 1.05,
+        "verify_ms": 0.37,
+        "generation_ms": 0.11,
+        "total_ms": 25.37
+      }
+    },
+    {
+      "query_id": "BM_006",
+      "query": "Seafood without shellfish in Gulberg",
+      "category": "allergen_shellfish",
+      "expected_status": "SUPPORTED",
+      "actual_status": "SUPPORTED",
+      "results_count": 5,
+      "served_dish_ids": [
+        "dish_025",
+        "dish_002",
+        "dish_005",
+        "dish_008",
+        "dish_014"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [
+        "Warning for 'Mystery Special Daily Daal': ALLERGEN_INFORMATION_UNKNOWN. Cannot guarantee allergen-free status due to unverified allergen data."
+      ],
+      "latency": {
+        "parse_ms": 0.41,
+        "retrieval_ms": 25.5,
+        "rerank_ms": 0.9,
+        "verify_ms": 0.52,
+        "generation_ms": 0.14,
+        "total_ms": 28.8
+      }
+    },
+    {
+      "query_id": "BM_007",
+      "query": "Meal under PKR 500 in DHA",
+      "category": "negative_budget",
+      "expected_status": "NO_MATCHING_ITEMS",
+      "actual_status": "NO_MATCHING_ITEMS",
+      "results_count": 0,
+      "served_dish_ids": [],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [],
+      "latency": {
+        "parse_ms": 0.21,
+        "retrieval_ms": 0.47,
+        "rerank_ms": 0.0,
+        "verify_ms": 0.0,
+        "generation_ms": 0.0,
+        "total_ms": 0.81
+      }
+    },
+    {
+      "query_id": "BM_008",
+      "query": "Dinner meal under PKR 20 in Gulberg",
+      "category": "negative_budget",
+      "expected_status": "NO_MATCHING_ITEMS",
+      "actual_status": "NO_MATCHING_ITEMS",
+      "results_count": 0,
+      "served_dish_ids": [],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [],
+      "latency": {
+        "parse_ms": 0.19,
+        "retrieval_ms": 0.55,
+        "rerank_ms": 0.0,
+        "verify_ms": 0.0,
+        "generation_ms": 0.0,
+        "total_ms": 0.8
+      }
+    },
+    {
+      "query_id": "BM_009",
+      "query": "High protein roasted chicken under 1000 in Gulberg",
+      "category": "budget_chicken",
+      "expected_status": "SUPPORTED",
+      "actual_status": "SUPPORTED",
+      "results_count": 5,
+      "served_dish_ids": [
+        "dish_017",
+        "dish_014",
+        "dish_016",
+        "dish_008",
+        "dish_028"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [
+        "Warning for 'Mystery Special Daily Daal': ALLERGEN_INFORMATION_UNKNOWN. Cannot guarantee allergen-free status due to unverified allergen data."
+      ],
+      "latency": {
+        "parse_ms": 0.2,
+        "retrieval_ms": 22.97,
+        "rerank_ms": 0.6,
+        "verify_ms": 1.34,
+        "generation_ms": 0.15,
+        "total_ms": 26.62
+      }
+    },
+    {
+      "query_id": "BM_010",
+      "query": "Vegetarian meal without dairy in F-7",
+      "category": "dietary_dairy_veg",
+      "expected_status": "SUPPORTED",
+      "actual_status": "SUPPORTED",
+      "results_count": 2,
+      "served_dish_ids": [
+        "dish_019",
+        "dish_020"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [],
+      "latency": {
+        "parse_ms": 0.37,
+        "retrieval_ms": 20.19,
+        "rerank_ms": 0.21,
+        "verify_ms": 0.31,
+        "generation_ms": 0.08,
+        "total_ms": 21.55
+      }
+    },
+    {
+      "query_id": "BM_011",
+      "query": "Non-Halal meal in F-7",
+      "category": "negative_dietary",
+      "expected_status": "NO_MATCHING_ITEMS",
+      "actual_status": "NO_MATCHING_ITEMS",
+      "results_count": 0,
+      "served_dish_ids": [],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [],
+      "latency": {
+        "parse_ms": 0.18,
+        "retrieval_ms": 0.42,
+        "rerank_ms": 0.0,
+        "verify_ms": 0.0,
+        "generation_ms": 0.0,
+        "total_ms": 0.68
+      }
+    },
+    {
+      "query_id": "BM_012",
+      "query": "Peshawari Chicken Karahi",
+      "category": "grounded_citation",
+      "expected_status": "SUPPORTED",
+      "actual_status": "SUPPORTED",
+      "results_count": 1,
+      "served_dish_ids": [
+        "dish_003"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [
+        "Warning for 'Chefs Secret Karahi': CONFLICTING_ALLERGEN_EVIDENCE. Cannot guarantee allergen-free status due to unverified allergen data."
+      ],
+      "latency": {
+        "parse_ms": 0.2,
+        "retrieval_ms": 26.18,
+        "rerank_ms": 1.02,
+        "verify_ms": 0.34,
+        "generation_ms": 0.06,
+        "total_ms": 28.03
+      }
+    },
+    {
+      "query_id": "BM_013",
+      "query": "Meal under PKR 400 in F-7",
+      "category": "negative_budget",
+      "expected_status": "NO_MATCHING_ITEMS",
+      "actual_status": "NO_MATCHING_ITEMS",
+      "results_count": 0,
+      "served_dish_ids": [],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [],
+      "latency": {
+        "parse_ms": 0.21,
+        "retrieval_ms": 0.46,
+        "rerank_ms": 0.0,
+        "verify_ms": 0.0,
+        "generation_ms": 0.0,
+        "total_ms": 0.77
+      }
+    },
+    {
+      "query_id": "BM_014",
+      "query": "Daal in Saddar without dairy",
+      "category": "allergen_daal",
+      "expected_status": "CONFLICTING_EVIDENCE",
+      "actual_status": "CONFLICTING_EVIDENCE",
+      "results_count": 4,
+      "served_dish_ids": [
+        "dish_007",
+        "dish_011",
+        "dish_024",
+        "dish_033"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [
+        "Warning for 'Chefs Secret Karahi': CONFLICTING_ALLERGEN_EVIDENCE. Cannot guarantee allergen-free status due to unverified allergen data.",
+        "CONFLICTING_ALLERGEN_EVIDENCE"
+      ],
+      "latency": {
+        "parse_ms": 0.41,
+        "retrieval_ms": 20.55,
+        "rerank_ms": 0.36,
+        "verify_ms": 0.79,
+        "generation_ms": 0.13,
+        "total_ms": 23.25
+      }
+    },
+    {
+      "query_id": "BM_015",
+      "query": "Sweet dessert under 700 without tree nuts in Gulberg",
+      "category": "allergen_dessert",
+      "expected_status": "PARTIALLY_SUPPORTED",
+      "actual_status": "PARTIALLY_SUPPORTED",
+      "results_count": 5,
+      "served_dish_ids": [
+        "dish_009",
+        "dish_026",
+        "dish_027",
+        "dish_028",
+        "dish_034"
+      ],
+      "allergen_safety_score": 1.0,
+      "price_precision_score": 1.0,
+      "dietary_recall_score": 1.0,
+      "citation_accuracy_score": 1.0,
+      "safety_invariant_compliant": true,
+      "warnings": [
+        "Warning for 'Mystery Special Daily Daal': ALLERGEN_INFORMATION_UNKNOWN. Cannot guarantee allergen-free status due to unverified allergen data.",
+        "ALLERGEN_INFORMATION_UNKNOWN"
+      ],
+      "latency": {
+        "parse_ms": 0.39,
+        "retrieval_ms": 22.26,
+        "rerank_ms": 0.35,
+        "verify_ms": 0.46,
+        "generation_ms": 0.15,
+        "total_ms": 24.83
+      }
+    }
+  ]
+}
