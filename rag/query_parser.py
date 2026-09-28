@@ -3,6 +3,8 @@
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 from pydantic import BaseModel, Field
+from typing import Optional, Tuple
+from pydantic import BaseModel, Field
 
 from ingestion.normalize_data import ALLERGEN_PATTERNS, CANONICAL_LOCATIONS, mask_allergen_exceptions
 
