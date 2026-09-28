@@ -17,7 +17,7 @@ import streamlit as st
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DEFAULT_API_URL = "http://localhost:8000"
+DEFAULT_API_URL = "https://dynamic-food-delivery-allergen-rag-production.up.railway.app"
 ASSET_FOOD_DIR = Path("ui/assets/food")
 
 # Curated food photo mapping with local SVG fallbacks
