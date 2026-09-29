@@ -1,17 +1,15 @@
 import streamlit as st
 import requests
+import streamlit as st
+from typing import Any, Dict
 
 DEFAULT_API_URL = "https://dynamic-food-delivery-allergen-rag-production.up.railway.app"
 
-
 def query_backend_api(
-    payload,
-    api_url: str = DEFAULT_API_URL,
-):
- def query_backend_api(
     payload: Any,
     api_url: str = DEFAULT_API_URL,
 ) -> Dict[str, Any]:
+
     """Execute a query against the FastAPI backend, with graceful fallback to in-process client."""
 
     if isinstance(payload, str):
