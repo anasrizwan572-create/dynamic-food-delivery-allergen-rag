@@ -1,15 +1,19 @@
-import streamlit as st
-import requests
-import streamlit as st
+import logging
 from typing import Any, Dict
 
+import requests
+import streamlit as st
+
+
 DEFAULT_API_URL = "https://dynamic-food-delivery-allergen-rag-production.up.railway.app"
+
+logger = logging.getLogger(__name__)
+
 
 def query_backend_api(
     payload: Any,
     api_url: str = DEFAULT_API_URL,
 ) -> Dict[str, Any]:
-
     """Execute a query against the FastAPI backend, with graceful fallback to in-process client."""
 
     if isinstance(payload, str):
@@ -62,6 +66,7 @@ def query_backend_api(
 
             try:
                 req = QueryRequest(**payload)
+
             except (ValueError, ValidationError) as val_err:
                 return {
                     "status": "INVALID_INPUT",
@@ -76,6 +81,7 @@ def query_backend_api(
             res = execute_query(req)
             data = res.model_dump()
             data["_in_process_fallback"] = True
+
             return data
 
         except Exception as inner_e:
@@ -83,6 +89,7 @@ def query_backend_api(
                 "Failed in-process execution fallback: %s",
                 inner_e,
             )
+
             return {
                 "status": "ERROR",
                 "query": payload.get("query", ""),
