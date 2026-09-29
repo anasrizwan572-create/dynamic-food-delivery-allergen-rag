@@ -1,4 +1,14 @@
+import streamlit as st
+import requests
+
+DEFAULT_API_URL = "https://dynamic-food-delivery-allergen-rag-production.up.railway.app"
+
+
 def query_backend_api(
+    payload,
+    api_url: str = DEFAULT_API_URL,
+):
+ def query_backend_api(
     payload: Any,
     api_url: str = DEFAULT_API_URL,
 ) -> Dict[str, Any]:
