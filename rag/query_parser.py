@@ -1,42 +1,94 @@
 """Deterministic query and constraint parser for restaurant menu queries."""
 
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
-from pydantic import BaseModel, Field
-from typing import Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 from pydantic import BaseModel, Field
 
-from ingestion.normalize_data import ALLERGEN_PATTERNS, CANONICAL_LOCATIONS, mask_allergen_exceptions
+from ingestion.normalize_data import CANONICAL_LOCATIONS
 
-# Common Allergen Synonyms for Query Extraction
+# ---------------------------------------------------------------------------
+# Vocabulary
+# ---------------------------------------------------------------------------
+
 ALLERGEN_QUERY_TERMS: Dict[str, List[str]] = {
     "dairy": [
-        "dairy", "milk", "butter", "cream", "cheese", "paneer", 
-        "yogurt", "yoghurt", "ghee", "desi ghee", "whey", "curd", "malai", "lactose"
+        "dairy", "milk", "butter", "cream", "cheese", "paneer",
+        "yogurt", "yoghurt", "ghee", "desi ghee", "whey", "curd", "malai", "lactose",
     ],
-    "peanuts": [
-        "peanut", "peanuts", "groundnut", "groundnuts", "peanut butter"
-    ],
-    "eggs": [
-        "egg", "eggs", "mayo", "mayonnaise"
-    ],
+    "peanuts": ["peanut", "peanuts", "groundnut", "groundnuts", "peanut butter"],
+    "eggs": ["egg", "eggs", "mayo", "mayonnaise"],
     "gluten": [
-        "gluten", "wheat", "flour", "maida", "atta", "bread", "breadcrumbs", 
-        "naan", "roti", "bun", "pastry"
+        "gluten", "wheat", "flour", "maida", "atta", "bread", "breadcrumbs",
+        "naan", "roti", "bun", "pastry",
     ],
-    "soy": [
-        "soy", "soya", "soybean", "edamame", "tofu"
-    ],
+    "soy": ["soy", "soya", "soybean", "edamame", "tofu"],
     "tree nuts": [
-        "tree nut", "tree nuts", "nut", "nuts", "almond", "almonds", "badam", 
-        "cashew", "cashews", "kaju", "pistachio", "pistachios", "pista", 
-        "walnut", "walnuts", "akhrot"
+        "tree nut", "tree nuts", "nut", "nuts", "almond", "almonds", "badam",
+        "cashew", "cashews", "kaju", "pistachio", "pistachios", "pista",
+        "walnut", "walnuts", "akhrot",
     ],
-    "shellfish": [
-        "shellfish", "prawn", "prawns", "shrimp", "shrimps", "crab", "crabs", "lobster"
-    ],
+    "shellfish": ["shellfish", "prawn", "prawns", "shrimp", "shrimps", "crab", "crabs", "lobster"],
 }
 
+# term -> allergens it implies. A generic "nut" is ambiguous, so exclude both
+# (over-excluding is the safe failure mode for allergen filtering).
+_TERM_TO_ALLERGENS: Dict[str, List[str]] = {}
+for _allergen, _terms in ALLERGEN_QUERY_TERMS.items():
+    for _t in _terms:
+        _TERM_TO_ALLERGENS.setdefault(_t, []).append(_allergen)
+for _t in ("nut", "nuts"):
+    _TERM_TO_ALLERGENS[_t] = ["tree nuts", "peanuts"]
+
+_TERMS_ALT = "|".join(re.escape(t) for t in sorted(_TERM_TO_ALLERGENS, key=len, reverse=True))
+_TERM_RE = re.compile(rf"\b(?:{_TERMS_ALT})\b", re.I)
+_LIST = rf"(?:{_TERMS_ALT})(?:\s*(?:,|/|&|\band\b|\bor\b)\s*(?:{_TERMS_ALT}))*"
+_EXCLUDE_RE = re.compile(
+    rf"\b(?:without|no|free\s+from|exclude|excluding|avoid|allergic\s+to|allergy\s+to)\s+(?:any\s+)?({_LIST})\b",
+    re.I,
+)
+_FREE_RE = re.compile(rf"\b({_TERMS_ALT})[-\s]free\b", re.I)
+
+SPICE_RULES: List[Tuple[re.Pattern, str]] = [
+    (re.compile(r"\b(?:mild|non-spicy|not\s+spicy)\b", re.I), "Mild"),
+    (re.compile(r"\b(?:extra\s+spicy|very\s+spicy|hot|spicy)\b", re.I), "Spicy"),
+    (re.compile(r"\b(?:medium\s+spice|medium)\b", re.I), "Medium"),
+]
+PROTEIN_RE = re.compile(r"\b(?:high[\s-]protein|protein[\s-]rich|rich\s+in\s+protein)\b", re.I)
+
+# A dish type ("burger") is WHAT the user wants; a protein ("beef") only
+# describes it. Keeping them apart stops "beef burger" from matching any beef dish.
+DISH_TYPES = ["burger", "biryani", "dessert", "rice", "bbq"]
+HARD_DISH_TYPES = {"burger"}  # dish types strict enough to filter on
+PROTEINS = ["chicken", "beef", "mutton", "seafood", "fish", "prawns", "vegetarian"]
+_SEAFOOD_ALIASES = {"fish", "prawns"}
+CUISINES = ["pakistani", "continental", "chinese", "thai", "italian", "middle eastern"]
+
+_LOCATION_PATTERNS: List[Tuple[re.Pattern, str]] = [
+    (re.compile(rf"\b(?:(?:in|at|near|around)\s+)?{re.escape(raw)}\b", re.I), canonical)
+    for raw, canonical in sorted(CANONICAL_LOCATIONS.items(), key=lambda kv: len(kv[0]), reverse=True)
+]
+
+_CUR = r"(?:pkr|rs\.?|rupees)?\s*"
+_NUM = r"(\d[\d,]*(?:\.\d+)?)"
+_RANGE_RE = re.compile(rf"\b(?:between|from)\s+{_CUR}{_NUM}\s*(?:and|to|-)\s*{_CUR}{_NUM}", re.I)
+_MAX_RE = re.compile(
+    rf"\b(?:under|below|less\s+than|up\s+to|within|max(?:imum)?(?:\s+price)?|at\s+most)\s*(?:of\s+)?{_CUR}{_NUM}",
+    re.I,
+)
+_MIN_RE = re.compile(
+    rf"\b(?:above|over|more\s+than|greater\s+than|at\s+least|min(?:imum)?(?:\s+price)?)\s*(?:of\s+)?{_CUR}{_NUM}",
+    re.I,
+)
+_OR_LESS_RE = re.compile(rf"\b{_CUR}{_NUM}\s*(?:or\s+less|or\s+under|budget)\b", re.I)
+_FILLER_RE = re.compile(r"\b(?:find|show|give|me|meals?|food|dishes?|options?|available|please)\b", re.I)
+_NON_HALAL_RE = re.compile(r"\bnon[-\s]?halal\b", re.I)
+_HALAL_RE = re.compile(r"\bhalal\b", re.I)
+
+
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
 
 class HardConstraints(BaseModel):
     """Hard constraints that candidate dishes MUST satisfy."""
@@ -47,6 +99,8 @@ class HardConstraints(BaseModel):
     halal: Optional[bool] = None
     excluded_allergens: List[str] = Field(default_factory=list)
     availability: Optional[bool] = True
+    categories: List[str] = Field(default_factory=list)  # dish type if present, else protein
+    proteins: List[str] = Field(default_factory=list)    # must ALSO match (AND) in the backend
 
 
 class SoftPreferences(BaseModel):
@@ -76,217 +130,184 @@ class ParsedQuery(BaseModel):
         }
 
 
-def extract_price_constraints(query: str) -> Tuple[Optional[float], Optional[float], str]:
-    """Extract maximum and minimum price constraints from natural language query.
+# ---------------------------------------------------------------------------
+# Extractors
+# ---------------------------------------------------------------------------
 
-    Handles:
-        - "under 1500", "below 1500", "less than 1500", "up to 1500", "within 1500"
-        - "above 500", "over 500", "more than 500", "starting from 500"
-        - "between 500 and 1500", "500 to 1500"
+def _to_float(s: str) -> float:
+    return float(s.replace(",", ""))
+
+
+def _cut(text: str, m: re.Match) -> str:
+    return text[: m.start()] + " " + text[m.end():]
+
+
+def extract_price_constraints(query: str) -> Tuple[Optional[float], Optional[float], str]:
+    """Extract (max_price, min_price, cleaned_query).
+
+    Handles "under/below/up to 1500", "above/over 500",
+    "between 500 and 1500", and "1500 or less".
     """
-    max_price: Optional[float] = None
-    min_price: Optional[float] = None
     cleaned = query
 
-    # 1. Between MIN and MAX
-    range_match = re.search(
-        r"(?i)\b(?:between|from)\s+(?:pkr|rs\.?)?\s*(\d+(?:,\d+)?)\s*(?:and|to|-)\s*(?:pkr|rs\.?)?\s*(\d+(?:,\d+)?)",
-        cleaned,
-    )
-    if range_match:
-        val1 = float(range_match.group(1).replace(",", ""))
-        val2 = float(range_match.group(2).replace(",", ""))
-        min_price = min(val1, val2)
-        max_price = max(val1, val2)
-        cleaned = cleaned[:range_match.start()] + cleaned[range_match.end():]
-        return max_price, min_price, cleaned
+    m = _RANGE_RE.search(cleaned)
+    if m:
+        a, b = _to_float(m.group(1)), _to_float(m.group(2))
+        return max(a, b), min(a, b), _cut(cleaned, m)
 
-    # 2. Maximum price (under, below, less than, up to, max)
-    max_match = re.search(
-        r"(?i)\b(?:under|below|less\s+than|up\s+to|within|max(?:imum)?(?:\s+price)?|at\s+most)\s*(?:of)?\s*(?:pkr|rs\.?|rupees)?\s*(\d+(?:,\d+)?)",
-        cleaned,
-    )
-    if max_match:
-        max_price = float(max_match.group(1).replace(",", ""))
-        cleaned = cleaned[:max_match.start()] + cleaned[max_match.end():]
+    max_price = min_price = None
 
-    # 3. Minimum price (above, over, more than, at least, min)
-    min_match = re.search(
-        r"(?i)\b(?:above|over|more\s+than|greater\s+than|at\s+least|min(?:imum)?(?:\s+price)?)\s*(?:of)?\s*(?:pkr|rs\.?|rupees)?\s*(\d+(?:,\d+)?)",
-        cleaned,
-    )
-    if min_match:
-        min_price = float(min_match.group(1).replace(",", ""))
-        cleaned = cleaned[:min_match.start()] + cleaned[min_match.end():]
+    m = _MAX_RE.search(cleaned)
+    if m:
+        max_price = _to_float(m.group(1))
+        cleaned = _cut(cleaned, m)
 
-    # 4. Trailing "under PKR 1500" or "PKR 1500 or less"
-    or_less_match = re.search(
-        r"(?i)(?:pkr|rs\.?|rupees)?\s*(\d+(?:,\d+)?)\s*(?:or\s+less|or\s+under|budget)",
-        cleaned,
-    )
-    if or_less_match and max_price is None:
-        max_price = float(or_less_match.group(1).replace(",", ""))
-        cleaned = cleaned[:or_less_match.start()] + cleaned[or_less_match.end():]
+    m = _MIN_RE.search(cleaned)
+    if m:
+        min_price = _to_float(m.group(1))
+        cleaned = _cut(cleaned, m)
+
+    if max_price is None:
+        m = _OR_LESS_RE.search(cleaned)
+        if m:
+            max_price = _to_float(m.group(1))
+            cleaned = _cut(cleaned, m)
 
     return max_price, min_price, cleaned
 
 
 def extract_location(query: str) -> Tuple[Optional[str], str]:
-    """Extract and normalize location zone from query."""
-    cleaned = query
-    for raw_loc, canonical in CANONICAL_LOCATIONS.items():
-        pattern = rf"(?i)\b(?:in|at|near|around)?\s*\b{re.escape(raw_loc)}\b"
-        match = re.search(pattern, cleaned)
-        if match:
-            # Remove matched location phrase from cleaned search text
-            cleaned = re.sub(pattern, "", cleaned, count=1)
-            return canonical, cleaned
-    return None, cleaned
+    """Extract and normalize a location zone (longest names match first)."""
+    for pattern, canonical in _LOCATION_PATTERNS:
+        m = pattern.search(query)
+        if m:
+            return canonical, _cut(query, m)
+    return None, query
 
 
 def extract_halal(query: str) -> Tuple[Optional[bool], str]:
-    """Extract Halal requirement from query."""
-    cleaned = query
-    if re.search(r"(?i)\bnon-halal\b", cleaned):
-        cleaned = re.sub(r"(?i)\bnon-halal\b", "", cleaned)
-        return False, cleaned
-    if re.search(r"(?i)\bhalal\b", cleaned):
-        cleaned = re.sub(r"(?i)\bhalal\b", "", cleaned)
-        return True, cleaned
-    return None, cleaned
+    """Extract Halal requirement (checks 'non-halal' first)."""
+    if _NON_HALAL_RE.search(query):
+        return False, _NON_HALAL_RE.sub(" ", query)
+    if _HALAL_RE.search(query):
+        return True, _HALAL_RE.sub(" ", query)
+    return None, query
 
 
 def extract_allergen_exclusions(query: str) -> Tuple[List[str], str]:
-    """Extract explicitly excluded allergens from query.
+    """Extract excluded allergens.
 
-    Matches patterns like:
-        - "without dairy"
-        - "no peanuts"
-        - "dairy-free"
-        - "free from gluten"
-        - "exclude peanuts and dairy"
-        - "allergic to shellfish"
+    Matches "without dairy or peanuts", "no gluten", "free from soy",
+    "exclude nuts", "allergic to shellfish", "dairy-free", "gluten free".
+
+    Only the allergen terms are consumed, so "without dairy chicken biryani"
+    keeps "chicken biryani" for category extraction and search.
     """
-    excluded: Set[str] = set()
-    cleaned = query
+    excluded: set = set()
 
-    exclusion_prefixes = [
-        r"(?i)\bwithout\s+([^,\.]+)",
-        r"(?i)\bno\s+([^,\.]+)",
-        r"(?i)\bfree\s+from\s+([^,\.]+)",
-        r"(?i)\bexclude\s+([^,\.]+)",
-        r"(?i)\bavoid\s+([^,\.]+)",
-        r"(?i)\ballergic\s+to\s+([^,\.]+)",
-    ]
+    def _collect(text: str) -> None:
+        for term in _TERM_RE.findall(text):
+            excluded.update(_TERM_TO_ALLERGENS[term.lower()])
 
-    for pat in exclusion_prefixes:
-        for match in re.finditer(pat, cleaned):
-            phrase = match.group(1).lower()
-            # Match allergen terms inside phrase
-            for standard_allergen, synonyms in ALLERGEN_QUERY_TERMS.items():
-                for syn in synonyms:
-                    if re.search(rf"\b{re.escape(syn)}\b", phrase):
-                        excluded.add(standard_allergen)
-            # Remove the exclusion phrase from cleaned query text
-            cleaned = cleaned[:match.start()] + " " + cleaned[match.end():]
+    def _exclude_repl(m: re.Match) -> str:
+        _collect(m.group(1))
+        return " "
 
-    # Hyphenated patterns: e.g. "dairy-free", "peanut-free", "gluten-free"
-    hyphen_pattern = r"(?i)\b([\w\s]+)-(?:free)\b"
-    for match in re.finditer(hyphen_pattern, cleaned):
-        item = match.group(1).strip().lower()
-        for standard_allergen, synonyms in ALLERGEN_QUERY_TERMS.items():
-            if item == standard_allergen or item in synonyms:
-                excluded.add(standard_allergen)
-        cleaned = cleaned[:match.start()] + " " + cleaned[match.end():]
+    def _free_repl(m: re.Match) -> str:
+        _collect(m.group(1))
+        return " "
 
-    return sorted(list(excluded)), cleaned
+    cleaned = _EXCLUDE_RE.sub(_exclude_repl, query)
+    cleaned = _FREE_RE.sub(_free_repl, cleaned)
+    return sorted(excluded), cleaned
 
 
 def extract_soft_preferences(query: str) -> Tuple[SoftPreferences, str]:
-    """Extract soft preferences: category, spice level, protein preference, cuisine."""
+    """Extract soft preferences: protein, spice level, category, cuisine."""
     cleaned = query
     prefs = SoftPreferences()
 
-    # Protein preference
-    if re.search(r"(?i)\b(?:high\s+protein|high-protein|protein\s+rich|rich\s+in\s+protein)\b", cleaned):
+    if PROTEIN_RE.search(cleaned):
         prefs.protein_preference = "high"
-        cleaned = re.sub(r"(?i)\b(?:high\s+protein|high-protein|protein\s+rich|rich\s+in\s+protein)\b", "", cleaned)
+        cleaned = PROTEIN_RE.sub(" ", cleaned)
 
-    # Spice level
-    if re.search(r"(?i)\b(?:extra\s+spicy|very\s+spicy|hot)\b", cleaned):
-        prefs.spice_level = "Spicy"
-        cleaned = re.sub(r"(?i)\b(?:extra\s+spicy|very\s+spicy|hot)\b", "", cleaned)
-    elif re.search(r"(?i)\b(?:spicy)\b", cleaned):
-        prefs.spice_level = "Spicy"
-        cleaned = re.sub(r"(?i)\b(?:spicy)\b", "", cleaned)
-    elif re.search(r"(?i)\b(?:medium\s+spice|medium)\b", cleaned):
-        prefs.spice_level = "Medium"
-        cleaned = re.sub(r"(?i)\b(?:medium\s+spice|medium)\b", "", cleaned)
-    elif re.search(r"(?i)\b(?:mild|non-spicy|not\s+spicy)\b", cleaned):
-        prefs.spice_level = "Mild"
-        cleaned = re.sub(r"(?i)\b(?:mild|non-spicy|not\s+spicy)\b", "", cleaned)
-
-    # Common categories
-    categories = ["chicken", "beef", "mutton", "seafood", "fish", "prawns", "vegetarian", "rice", "biryani", "burger", "dessert", "bbq"]
-    for cat in categories:
-        if re.search(rf"(?i)\b{cat}\b", cleaned):
-            prefs.category = "Seafood" if cat in ["fish", "prawns"] else cat.capitalize()
+    for pattern, level in SPICE_RULES:
+        if pattern.search(cleaned):
+            prefs.spice_level = level
+            cleaned = pattern.sub(" ", cleaned)
             break
 
-    # Cuisines
-    cuisines = ["pakistani", "continental", "chinese", "thai", "italian", "middle eastern"]
-    for cuis in cuisines:
-        if re.search(rf"(?i)\b{cuis}\b", cleaned):
-            prefs.cuisine = cuis.title()
+    dishes, proteins = extract_dish_and_protein(cleaned)
+    prefs.category = (dishes or proteins or [None])[0]
+
+    for cuisine in CUISINES:
+        if re.search(rf"\b{cuisine}\b", cleaned, re.I):
+            prefs.cuisine = cuisine.title()
             break
 
     return prefs, cleaned
 
 
+def _label(term: str) -> str:
+    return "Seafood" if term in _SEAFOOD_ALIASES else term.capitalize()
+
+
+def _find_terms(terms: List[str], text: str) -> List[str]:
+    found: List[str] = []
+    for t in terms:
+        if re.search(rf"\b{t}\b", text, re.I) and _label(t) not in found:
+            found.append(_label(t))
+    return found
+
+
+def extract_dish_and_protein(text: str) -> Tuple[List[str], List[str]]:
+    """Return (dish_types, proteins) mentioned in the text, e.g.
+    "beef burger" -> (["Burger"], ["Beef"])."""
+    return _find_terms(DISH_TYPES, text), _find_terms(PROTEINS, text)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
 def parse_query(raw_query: str) -> ParsedQuery:
-    """Parse natural-language query into structured hard constraints and soft preferences.
+    """Parse a natural-language query into hard constraints and soft preferences.
 
     Example:
         "Find high-protein Halal chicken meals under PKR 1500 without dairy or peanuts in Gulberg."
     Yields:
-        HardConstraints(max_price_pkr=1500.0, halal=True, location='Gulberg', excluded_allergens=['dairy', 'peanuts'])
+        HardConstraints(max_price_pkr=1500.0, halal=True, location='Gulberg',
+                        excluded_allergens=['dairy', 'peanuts'], categories=['Chicken'])
         SoftPreferences(category='Chicken', protein_preference='high')
     """
-    working_text = raw_query.strip()
+    text = raw_query.strip()
 
-    # 1. Price constraints (Hard)
-    max_price, min_price, working_text = extract_price_constraints(working_text)
+    max_price, min_price, text = extract_price_constraints(text)
+    location, text = extract_location(text)
+    halal, text = extract_halal(text)
+    excluded_allergens, text = extract_allergen_exclusions(text)
+    soft_prefs, text = extract_soft_preferences(text)
 
-    # 2. Location (Hard)
-    location, working_text = extract_location(working_text)
+    dishes, proteins = extract_dish_and_protein(text)
+    hard_dishes = [d for d in dishes if d.lower() in HARD_DISH_TYPES]
 
-    # 3. Halal requirement (Hard)
-    halal, working_text = extract_halal(working_text)
-
-    # 4. Excluded allergens (Hard)
-    excluded_allergens, working_text = extract_allergen_exclusions(working_text)
-
-    # 5. Soft preferences
-    soft_prefs, working_text = extract_soft_preferences(working_text)
-
-    hard_constraints = HardConstraints(
+    hard = HardConstraints(
         max_price_pkr=max_price,
         min_price_pkr=min_price,
         location=location,
         halal=halal,
         excluded_allergens=excluded_allergens,
+        categories=hard_dishes or proteins,
+        proteins=proteins,
         availability=True,
     )
 
-    # Clean residual filler words from search query
-    cleaned_query = re.sub(r"(?i)\b(find|show|give|me|meals?|food|dishes?|options?|available|please)\b", "", working_text)
-    cleaned_query = re.sub(r"\s+", " ", cleaned_query).strip()
-    if not cleaned_query:
-        cleaned_query = raw_query.strip()
+    cleaned_query = _FILLER_RE.sub(" ", text)
+    cleaned_query = re.sub(r"[\s.,]+", " ", cleaned_query).strip() or raw_query.strip()
 
     return ParsedQuery(
         raw_query=raw_query,
-        hard_constraints=hard_constraints,
+        hard_constraints=hard,
         soft_preferences=soft_prefs,
         cleaned_query=cleaned_query,
     )
