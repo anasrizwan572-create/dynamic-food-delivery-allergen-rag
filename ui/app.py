@@ -96,8 +96,7 @@ def query_backend_api(
         payload = {"query": payload}
     clean_url = api_url.rstrip("/")
     try:
-        resp = requests.post(f"{clean_url}/query", json=payload, timeout=12)
-        if resp.status_code == 200:
+        resp = requests.post(f"{clean_url}/query", json=payload, timeout=60)
             return resp.json()
         elif resp.status_code == 422:
             return {
