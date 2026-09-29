@@ -95,10 +95,13 @@ def query_backend_api(
     if isinstance(payload, str):
         payload = {"query": payload}
     clean_url = api_url.rstrip("/")
-    try:
-        resp = requests.post(f"{clean_url}/query", json=payload, timeout=60)
-            return resp.json()
-        elif resp.status_code == 422:
+   clean_url = api_url.rstrip("/")
+try:
+    resp = requests.post(f"{clean_url}/query", json=payload, timeout=60)
+
+    if resp.status_code == 200:
+        return resp.json()
+    elif resp.status_code == 422:
             return {
                 "status": "INVALID_INPUT",
                 "query": payload.get("query", ""),
