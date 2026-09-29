@@ -173,24 +173,29 @@ def query_backend_api(
             }
 
 
+import streamlit as st
+
+@st.cache_data(ttl=60, show_spinner=False)
 def fetch_health_status(api_url: str = DEFAULT_API_URL) -> Dict[str, Any]:
-    """Check health and readiness of the backend services."""
-    clean_url = api_url.rstrip("/")
+    """Backend health; falls back to /menu for the count if /health reports none."""
+    base = api_url.rstrip("/")
     try:
-        resp = requests.get(f"{clean_url}/health", timeout=5)
-        if resp.status_code == 200:
-            return resp.json()
-    except Exception:
-        pass
-
-    try:
-        from api.main import get_health
-
-        return get_health().model_dump()
-    except Exception as e:
+        resp = requests.get(f"{base}/health", timeout=10)
+        resp.raise_for_status()
+        health = resp.json()
+    except (requests.RequestException, ValueError) as e:
         return {"status": "unreachable", "error": str(e)}
 
-
+    if not health.get("total_indexed_items"):
+        try:
+            menu = requests.get(f"{base}/menu", timeout=10).json()
+            health["total_indexed_items"] = (
+                len(menu) if isinstance(menu, list)
+                else menu.get("total", menu.get("count", len(menu.get("items", []))))
+            )
+        except (requests.RequestException, ValueError, AttributeError):
+            pass
+    return health
 # =====================================================================
 # UI Presentation Components
 # =====================================================================
